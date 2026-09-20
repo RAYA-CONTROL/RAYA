@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite RAYA and visit the project website for the accompanying paper."
+type: software
+title: "RAYA: Learning Where and When to Intervene for Robot Recovery"
+authors:
+  - family-names: Mahajan
+    given-names: Ishaan
+  - family-names: Chen
+    given-names: Charles
+  - family-names: Dümbgen
+    given-names: Frederike
+  - family-names: Plancher
+    given-names: Brian
+repository-code: "https://github.com/RAYA-CONTROL/RAYA"
+url: "https://raya-control.github.io/"
+version: 0.1.0

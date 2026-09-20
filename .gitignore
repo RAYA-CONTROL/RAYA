@@ -1,0 +1,23 @@
+# Local builds and experiment output
+build/
+build-*/
+results/
+*.o
+*.a
+*.so
+*.dylib
+*.elf
+*.bin
+*.hex
+*.map
+*.d
+*.su
+.*.cmd
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+.vscode/
+.idea/
+# Fetched firmware dependency
+third_party/crazyflie-firmware/

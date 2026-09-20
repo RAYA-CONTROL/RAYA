@@ -1,0 +1,7 @@
+obj-y += controller_raya.o
+ccflags-y += -DTINYMPC_TRAJECTORY=$(TRAJECTORY)
+ccflags-y += -DRAYA_ACTIVE_HORIZON=$(ACTIVE_HORIZON)
+ccflags-y += -DTINYMPC_BENCH_PROFILE=$(BENCH_PROFILE)
+ifeq ($(NUMERIC_O2),1)
+ccflags-y += -O2
+endif

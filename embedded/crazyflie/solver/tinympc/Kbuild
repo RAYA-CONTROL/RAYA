@@ -1,0 +1,4 @@
+obj-y += admm.o
+ifeq ($(NUMERIC_O2),1)
+ccflags-y += -O2
+endif

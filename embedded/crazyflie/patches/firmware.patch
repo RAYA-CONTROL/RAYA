@@ -1,0 +1,215 @@
+diff --git a/Makefile b/Makefile
+index 025628a7..385a935b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -37,6 +37,7 @@ LIB = $(srctree)/src/lib
+ PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
+ LINKER_DIR = $(srctree)/tools/make/F405/linker
+ 
++LDFLAGS := $(filter-out --specs=nosys.specs --specs=nano.specs $(PROCESSOR) -nostdlib,$(LDFLAGS))
+ LDFLAGS += --specs=nosys.specs --specs=nano.specs $(PROCESSOR) -nostdlib
+ image_LDFLAGS += -z noexecstack
+ image_LDFLAGS += -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
+diff --git a/src/modules/interface/power_distribution.h b/src/modules/interface/power_distribution.h
+index 07dd866f..7d129da2 100644
+--- a/src/modules/interface/power_distribution.h
++++ b/src/modules/interface/power_distribution.h
+@@ -28,6 +28,15 @@
+ 
+ #include "stabilizer_types.h"
+ 
++typedef struct {
++  uint16_t maxAllowed;
++  int32_t latestRequested;
++  uint16_t latestApplied;
++  int32_t peakRequested;
++  uint32_t sampleCount;
++  uint32_t capHitCount;
++} powerDistributionCapStats_t;
++
+ 
+ void powerDistributionInit(void);
+ bool powerDistributionTest(void);
+@@ -52,6 +61,33 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
+  */
+ bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUncapped, motors_thrust_pwm_t* motorPwm);
+ 
++/**
++ * @brief Set the post-mixer, post-battery-compensation ceiling shared by all
++ * motors. The default is UINT16_MAX. This does not alter controller or model
++ * input bounds.
++ */
++void powerDistributionSetMaxMotorThrust(uint16_t maxThrust);
++
++/**
++ * @brief Apply a multiplicative post-mixer loss to one motor only. A retained
++ * percentage of 100 is physically inert. Pass a motor index outside
++ * [0, STABILIZER_NR_OF_MOTORS) to disable the one-motor fault. Unlike the
++ * shared ceiling, this deliberately does not reduce the other motors.
++ */
++void powerDistributionSetSingleMotorThrustScale(uint8_t motorIndex,
++                                                uint8_t retainedPercent);
++
++/**
++ * @brief Clear cumulative output-modification instrumentation without
++ * changing the configured ceiling or one-motor scale.
++ */
++void powerDistributionResetCapStats(void);
++
++/**
++ * @brief Snapshot raw cap instrumentation for logging outside the motor loop.
++ */
++void powerDistributionGetCapStats(powerDistributionCapStats_t* stats);
++
+ /**
+  * Returns a 1 when motor 'id' gives thrust, returns 0 otherwise
+  */
+diff --git a/src/modules/src/power_distribution_quadrotor.c b/src/modules/src/power_distribution_quadrotor.c
+index ef114ce0..3fa2ec58 100644
+--- a/src/modules/src/power_distribution_quadrotor.c
++++ b/src/modules/src/power_distribution_quadrotor.c
+@@ -47,6 +47,14 @@
+ #endif
+ 
+ static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
++static uint16_t maxMotorThrust = UINT16_MAX;
++static uint8_t singleScaledMotorIndex = UINT8_MAX;
++static uint8_t singleMotorRetainedPercent = 100;
++static int32_t latestMaxRequested = 0;
++static uint16_t latestMaxApplied = 0;
++static int32_t peakMaxRequested = 0;
++static uint32_t capSampleCount = 0;
++static uint32_t capHitCount = 0;
+ 
+ int powerDistributionMotorType(uint32_t id)
+ {
+@@ -73,6 +81,52 @@ bool powerDistributionTest(void)
+   return pass;
+ }
+ 
++void powerDistributionSetMaxMotorThrust(uint16_t maxThrust)
++{
++  maxMotorThrust = maxThrust;
++}
++
++void powerDistributionSetSingleMotorThrustScale(uint8_t motorIndex,
++                                                uint8_t retainedPercent)
++{
++  if (motorIndex < STABILIZER_NR_OF_MOTORS) {
++    singleScaledMotorIndex = motorIndex;
++    singleMotorRetainedPercent = retainedPercent <= 100
++                                      ? retainedPercent
++                                      : 100;
++  } else {
++    singleScaledMotorIndex = UINT8_MAX;
++    singleMotorRetainedPercent = 100;
++  }
++}
++
++void powerDistributionResetCapStats(void)
++{
++  latestMaxRequested = 0;
++  latestMaxApplied = 0;
++  peakMaxRequested = 0;
++  capSampleCount = 0;
++  capHitCount = 0;
++}
++
++void powerDistributionGetCapStats(powerDistributionCapStats_t* stats)
++{
++  if (stats == NULL) {
++    return;
++  }
++
++  stats->maxAllowed =
++      singleScaledMotorIndex < STABILIZER_NR_OF_MOTORS
++          ? (uint16_t)(((uint32_t)UINT16_MAX *
++                        singleMotorRetainedPercent) / 100u)
++          : maxMotorThrust;
++  stats->latestRequested = latestMaxRequested;
++  stats->latestApplied = latestMaxApplied;
++  stats->peakRequested = peakMaxRequested;
++  stats->sampleCount = capSampleCount;
++  stats->capHitCount = capHitCount;
++}
++
+ static uint16_t capMinThrust(float thrust, uint32_t minThrust) {
+   if (thrust < minThrust) {
+     return minThrust;
+@@ -178,8 +232,9 @@ void powerDistribution(const control_t *control, motors_thrust_uncapped_t* motor
+ 
+ bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUncapped, motors_thrust_pwm_t* motorPwm)
+ {
+-  const int32_t maxAllowedThrust = UINT16_MAX;
++  const int32_t maxAllowedThrust = maxMotorThrust;
+   bool isCapped = false;
++  bool singleMotorWasDerated = false;
+ 
+   // Find highest thrust
+   int32_t highestThrustFound = 0;
+@@ -199,10 +254,47 @@ bool powerDistributionCap(const motors_thrust_uncapped_t* motorThrustBatCompUnca
+     isCapped = true;
+   }
+ 
++  uint16_t highestApplied = 0;
++  int32_t monitoredRequested = highestThrustFound;
++  uint16_t monitoredApplied = 0;
+   for (int motorIndex = 0; motorIndex < STABILIZER_NR_OF_MOTORS; motorIndex++)
+   {
+     int32_t thrustCappedUpper = motorThrustBatCompUncapped->list[motorIndex] - reduction;
+     motorPwm->list[motorIndex] = capMinThrust(thrustCappedUpper, powerDistributionGetIdleThrust());
++    if (motorIndex == singleScaledMotorIndex) {
++      monitoredRequested = motorPwm->list[motorIndex];
++      const uint16_t scaledMotorPwm = (uint16_t)(
++          ((uint32_t)motorPwm->list[motorIndex] *
++           singleMotorRetainedPercent + 50u) / 100u);
++      if (scaledMotorPwm < motorPwm->list[motorIndex]) {
++        singleMotorWasDerated = true;
++        isCapped = true;
++      }
++      motorPwm->list[motorIndex] = scaledMotorPwm;
++      monitoredApplied = motorPwm->list[motorIndex];
++    }
++    if (motorPwm->list[motorIndex] > highestApplied) {
++      highestApplied = motorPwm->list[motorIndex];
++    }
++  }
++
++  latestMaxRequested = monitoredRequested;
++  latestMaxApplied =
++      singleScaledMotorIndex < STABILIZER_NR_OF_MOTORS
++          ? monitoredApplied
++          : highestApplied;
++  if (monitoredRequested > peakMaxRequested) {
++    peakMaxRequested = monitoredRequested;
++  }
++  ++capSampleCount;
++  // When a one-motor experiment is configured, capHitCount counts samples in
++  // which the multiplicative loss changed that motor's output. Native common-
++  // mode saturation remains in the return value but is not mixed into this
++  // fault-exposure counter.
++  if (singleScaledMotorIndex < STABILIZER_NR_OF_MOTORS
++          ? singleMotorWasDerated
++          : isCapped) {
++    ++capHitCount;
+   }
+ 
+   return isCapped;
+@@ -233,4 +325,15 @@ PARAM_GROUP_START(powerDist)
+  * common value is between 3000 - 6000.
+  */
+ PARAM_ADD_CORE(PARAM_UINT32 | PARAM_PERSISTENT, idleThrust, &idleThrust)
+-PARAM_GROUP_STOP(powerDist)
+\ No newline at end of file
++PARAM_GROUP_STOP(powerDist)
++
++LOG_GROUP_START(powerDist)
++LOG_ADD(LOG_UINT16, maxMotor, &maxMotorThrust)
++LOG_ADD(LOG_UINT8, faultMotor, &singleScaledMotorIndex)
++LOG_ADD(LOG_UINT8, faultPct, &singleMotorRetainedPercent)
++LOG_ADD(LOG_INT32, latestReq, &latestMaxRequested)
++LOG_ADD(LOG_UINT16, latestApp, &latestMaxApplied)
++LOG_ADD(LOG_INT32, peakReq, &peakMaxRequested)
++LOG_ADD(LOG_UINT32, capSamples, &capSampleCount)
++LOG_ADD(LOG_UINT32, capHits, &capHitCount)
++LOG_GROUP_STOP(powerDist)

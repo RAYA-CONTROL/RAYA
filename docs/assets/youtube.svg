@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="118" height="32" viewBox="0 0 118 32" role="img" aria-label="YouTube (link to be added)">
-  <title>YouTube (link to be added)</title>
-  <rect width="118" height="32" rx="6" fill="#6b7280"/>
-  <rect x="8" y="9" width="21" height="14" rx="4" fill="#fff"/><path d="M16 12.5v7l6-3.5z" fill="#6b7280"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="118" height="32" viewBox="0 0 118 32" role="img" aria-label="YouTube">
+  <title>YouTube</title>
+  <rect width="118" height="32" rx="6" fill="#c4302b"/>
+  <rect x="8" y="9" width="21" height="14" rx="4" fill="#fff"/><path d="M16 12.5v7l6-3.5z" fill="#c4302b"/>
   <text x="37" y="16" dy=".35em" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="600">YouTube</text>
 </svg>

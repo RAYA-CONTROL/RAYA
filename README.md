@@ -2,7 +2,7 @@
 
 **Recoverability-Aware Yielding of Authority**
 
-[![Paper](docs/assets/paper.svg)](https://arxiv.org/abs/2609.21690) [![Project Page](docs/assets/project-page.svg)](https://raya-control.github.io/) ![YouTube](docs/assets/youtube.svg)
+[![Paper](docs/assets/paper.svg)](https://arxiv.org/abs/2609.21690) [![Project Page](docs/assets/project-page.svg)](https://raya-control.github.io/) [![YouTube](docs/assets/youtube.svg)](https://youtu.be/Zy9LKJpOZww)
 
 RAYA places a learned recoverability margin inside model predictive control and uses a bounded learned scheduler to adjust task weights as recovery becomes difficult.
 

@@ -73,7 +73,7 @@ Use [CITATION.cff](CITATION.cff) to cite this software. The project title is *RA
 
 RAYA simulation code and repository utilities use the [MIT license](LICENSE). The Crazyflie controller retains its [GPLv3 license](embedded/crazyflie/LICENSE). Third-party notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-## BibTeX
+## Citing
 
 ```bibtex
 @misc{mahajan2026raya,

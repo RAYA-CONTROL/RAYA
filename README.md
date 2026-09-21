@@ -2,11 +2,13 @@
 
 **Recoverability-Aware Yielding of Authority**
 
+[![Paper](docs/assets/paper.svg)](https://arxiv.org/abs/2609.21690) [![Project Page](docs/assets/project-page.svg)](https://raya-control.github.io/) ![YouTube](docs/assets/youtube.svg)
+
 RAYA places a learned recoverability margin inside model predictive control and uses a bounded learned scheduler to adjust task weights as recovery becomes difficult.
 
 This repository contains standalone **quadrotor** and **F1TENTH** simulations, plus the **Crazyflie 2.1 Brushless** controller. The simulations include frozen model weights, authority policies, model parameters, and the required TinyMPC and Eigen source. No training, ROS, or external model downloads are needed to run them.
 
-[Project website](https://raya-control.github.io/) · [Simulation guide](docs/simulations.md) · [Crazyflie code](embedded/crazyflie/README.md)
+[Simulation guide](docs/simulations.md) · [Crazyflie code](embedded/crazyflie/README.md)
 
 ## Build and run
 

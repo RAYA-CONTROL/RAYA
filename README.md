@@ -66,3 +66,18 @@ This runs all 4,200 quadrotor and 3,000 F1TENTH RAYA episodes. It saves the froz
 Use [CITATION.cff](CITATION.cff) to cite this software. The project title is *RAYA: Learning Where and When to Intervene for Robot Recovery*.
 
 RAYA simulation code and repository utilities use the [MIT license](LICENSE). The Crazyflie controller retains its [GPLv3 license](embedded/crazyflie/LICENSE). Third-party notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## BibTeX
+
+```bibtex
+@misc{mahajan2026raya,
+  title         = {{RAYA}: Learning Where and When to Intervene for Robot Recovery},
+  author        = {Ishaan Mahajan and Charles Chen and Frederike D{\"u}mbgen and Brian Plancher},
+  year          = {2026},
+  eprint        = {2609.21690},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.RO},
+  doi           = {10.48550/arXiv.2609.21690},
+  url           = {https://arxiv.org/abs/2609.21690}
+}
+```

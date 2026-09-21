@@ -69,7 +69,7 @@ This runs all 4,200 quadrotor and 3,000 F1TENTH RAYA episodes. It saves the froz
 
 ## Citation and license
 
-Use [CITATION.cff](CITATION.cff) to cite this software. The project title is *RAYA: Learning Where and When to Intervene for Robot Recovery*.
+If you use this code, please cite our work.
 
 RAYA simulation code and repository utilities use the [MIT license](LICENSE). The Crazyflie controller retains its [GPLv3 license](embedded/crazyflie/LICENSE). Third-party notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
